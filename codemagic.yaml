@@ -8,6 +8,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: biz.spotd.app
+        certificate_private_key: auto
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
