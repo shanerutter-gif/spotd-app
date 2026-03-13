@@ -17,6 +17,8 @@ workflows:
         script: npm install
       - name: Capacitor sync
         script: npx cap sync ios
+      - name: Set up code signing
+        script: xcode-project use-profiles
       - name: Create export options
         script: |
           cat > /Users/builder/export_options.plist << EOF
