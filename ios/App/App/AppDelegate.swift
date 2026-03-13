@@ -6,6 +6,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate {
 
     var window: UIWindow?
     var webView: WKWebView!
+    var webViewBottomConstraint: NSLayoutConstraint!
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
@@ -28,9 +29,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate {
         vc.view.addSubview(webView)
 
         let safeArea = vc.view.safeAreaLayoutGuide
+        webViewBottomConstraint = webView.bottomAnchor.constraint(equalTo: vc.view.bottomAnchor)
         NSLayoutConstraint.activate([
             webView.topAnchor.constraint(equalTo: safeArea.topAnchor),
-            webView.bottomAnchor.constraint(equalTo: vc.view.bottomAnchor),
+            webViewBottomConstraint,
             webView.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor)
         ])
@@ -49,13 +51,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate {
     }
 
     @objc func keyboardWillShow(_ notification: Notification) {
-        if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-            webView.scrollView.contentInset.bottom = keyboardFrame.height
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else { return }
+        webViewBottomConstraint.constant = -keyboardFrame.height
+        UIView.animate(withDuration: duration) {
+            self.window?.rootViewController?.view.layoutIfNeeded()
         }
     }
 
     @objc func keyboardWillHide(_ notification: Notification) {
-        webView.scrollView.contentInset.bottom = 0
+        guard let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else { return }
+        webViewBottomConstraint.constant = 0
+        UIView.animate(withDuration: duration) {
+            self.window?.rootViewController?.view.layoutIfNeeded()
+        }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
