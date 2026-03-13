@@ -60,5 +60,9 @@
 			</dict>
 		</dict>
 	</dict>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Spotd uses your location to show happy hours and events near you.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Spotd uses your location to show happy hours and events near you.</string>
 </dict>
 </plist>
