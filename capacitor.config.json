@@ -1,9 +1,10 @@
 {
-  "appId": "biz.spotd.app",
-  "appName": "Spotd",
-  "webDir": "www",
-  "server": {
-    "url": "https://spotd.biz",
-    "cleartext": false
-  }
+  "appId": "biz.spotd.app",
+  "appName": "Spotd",
+  "webDir": "www",
+  "server": {
+    "url": "https://spotd.biz",
+    "cleartext": false,
+    "androidScheme": "https"
+  }
 }
