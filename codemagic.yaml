@@ -20,7 +20,7 @@ workflows:
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Set build number
-        script: agvtool new-version -all $(($(app-store-connect get-latest-build-number "biz.spotd.app") + 1))
+        script: cd ios/App && agvtool new-version -all $BUILD_NUMBER
       - name: Create export options
         script: |
           cat > /Users/builder/export_options.plist << EOF
