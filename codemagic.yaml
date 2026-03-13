@@ -28,6 +28,15 @@ workflows:
           <dict>
             <key>method</key>
             <string>app-store</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>biz.spotd.app</key>
+              <string>Spotd App Store</string>
+            </dict>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>signingStyle</key>
+            <string>manual</string>
             <key>uploadBitcode</key>
             <false/>
             <key>uploadSymbols</key>
