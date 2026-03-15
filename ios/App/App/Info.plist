@@ -64,5 +64,11 @@
 <string>Spotd uses your location to show happy hours and events near you.</string>
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 <string>Spotd uses your location to show happy hours and events near you.</string>
+<key>NSCameraUsageDescription</key>
+<string>Spotd uses your camera to add photos when you check in at a venue.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Spotd accesses your photo library so you can share check-in photos.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Spotd saves check-in photos to your photo library.</string>
 </dict>
 </plist>
