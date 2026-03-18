@@ -1,7 +1,7 @@
 import UIKit
 import WebKit
 
-class MainViewController: UIViewController, WKNavigationDelegate {
+class MainViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
 
     var webView: WKWebView!
 
@@ -16,6 +16,7 @@ class MainViewController: UIViewController, WKNavigationDelegate {
         webView = WKWebView(frame: view.bounds, configuration: config)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.navigationDelegate = self
+        webView.uiDelegate = self
         webView.backgroundColor = UIColor(red: 0.96, green: 0.94, blue: 0.90, alpha: 1.0)
         webView.isOpaque = false
         view.addSubview(webView)
@@ -34,5 +35,16 @@ class MainViewController: UIViewController, WKNavigationDelegate {
         } else {
             decisionHandler(.allow)
         }
+    }
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            if let host = url.host, !host.contains("spotd.biz") {
+                UIApplication.shared.open(url)
+            } else {
+                webView.load(navigationAction.request)
+            }
+        }
+        return nil
     }
 }
