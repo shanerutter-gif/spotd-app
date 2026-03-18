@@ -2,7 +2,7 @@ import UIKit
 import WebKit
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKUIDelegate {
 
     var window: UIWindow?
     var webView: WKWebView!
@@ -22,6 +22,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate {
         webView = WKWebView(frame: .zero, configuration: config)
         webView.translatesAutoresizingMaskIntoConstraints = false
         webView.navigationDelegate = self
+        webView.uiDelegate = self
         webView.backgroundColor = UIColor(red: 0.96, green: 0.94, blue: 0.90, alpha: 1.0)
         webView.isOpaque = true
         webView.scrollView.contentInsetAdjustmentBehavior = .never
@@ -74,5 +75,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate {
         } else {
             decisionHandler(.allow)
         }
+    }
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            if let host = url.host, !host.contains("spotd.biz") {
+                UIApplication.shared.open(url)
+            } else {
+                webView.load(navigationAction.request)
+            }
+        }
+        return nil
     }
 }
