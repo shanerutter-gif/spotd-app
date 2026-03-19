@@ -1,10 +1,14 @@
 {
-  "appId": "biz.spotd.app",
-  "appName": "Spotd",
-  "webDir": "www",
-  "server": {
-    "url": "https://spotd.biz",
-    "cleartext": false,
-    "androidScheme": "https"
-  }
+	"appId": "biz.spotd.app",
+	"appName": "Spotd",
+	"webDir": "www",
+	"server": {
+		"url": "https://spotd.biz",
+		"cleartext": false,
+		"androidScheme": "https"
+	},
+	"packageClassList": [
+		"CAPCameraPlugin",
+		"HapticsPlugin"
+	]
 }
