@@ -83,17 +83,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
     }
 
     // Show notifications even when app is in foreground
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound, .badge])
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        return [.banner, .sound, .badge]
     }
 
     // Handle notification tap
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         let userInfo = response.notification.request.content.userInfo
         if let url = userInfo["url"] as? String {
-            webView?.evaluateJavaScript("window.location.href = '\(url)';")
+            await MainActor.run {
+                webView?.evaluateJavaScript("window.location.href = '\(url)';")
+            }
         }
-        completionHandler()
     }
 
     @objc func keyboardWillShow(_ notification: Notification) {
