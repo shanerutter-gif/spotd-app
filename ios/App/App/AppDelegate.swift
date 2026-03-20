@@ -1,14 +1,19 @@
 import UIKit
 import WebKit
+import UserNotifications
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKUIDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
     var webView: WKWebView!
     var webViewBottomConstraint: NSLayoutConstraint!
+    var pendingDeviceToken: String?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+
+        // Set up push notification delegate
+        UNUserNotificationCenter.current().delegate = self
 
         window = UIWindow(frame: UIScreen.main.bounds)
 
@@ -18,6 +23,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+
+        // Add JS bridge for push notifications
+        let userController = config.userContentController
+        userController.add(self, name: "spotdPush")
+
+        // Inject native platform flag so the web app knows it's in the iOS wrapper
+        let script = WKUserScript(
+            source: "window.spotdNative = { platform: 'ios' };",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        userController.addUserScript(script)
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.translatesAutoresizingMaskIntoConstraints = false
@@ -49,6 +66,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         window!.makeKeyAndVisible()
 
         return true
+    }
+
+    // MARK: - Push Notifications
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("[Push] Device token: \(token)")
+        pendingDeviceToken = token
+        // Send token to web app via JS bridge
+        webView?.evaluateJavaScript("window.spotdNative && (window.spotdNative.deviceToken = '\(token)'); if (typeof window.onNativePushToken === 'function') window.onNativePushToken('\(token)');")
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("[Push] Failed to register: \(error.localizedDescription)")
+    }
+
+    // Show notifications even when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .badge])
+    }
+
+    // Handle notification tap
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        if let url = userInfo["url"] as? String {
+            webView?.evaluateJavaScript("window.location.href = '\(url)';")
+        }
+        completionHandler()
     }
 
     @objc func keyboardWillShow(_ notification: Notification) {
@@ -86,5 +131,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
             }
         }
         return nil
+    }
+}
+
+// MARK: - JS Bridge for Push Notifications
+extension AppDelegate: WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "spotdPush" else { return }
+        guard let body = message.body as? String else { return }
+
+        if body == "requestPermission" {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                print("[Push] Permission granted: \(granted)")
+                if granted {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.registerForRemoteNotifications()
+                    }
+                }
+                DispatchQueue.main.async {
+                    self.webView?.evaluateJavaScript("if (typeof window.onNativePushResult === 'function') window.onNativePushResult(\(granted));")
+                }
+            }
+        } else if body == "getToken" {
+            if let token = pendingDeviceToken {
+                webView?.evaluateJavaScript("if (typeof window.onNativePushToken === 'function') window.onNativePushToken('\(token)');")
+            }
+        }
     }
 }
