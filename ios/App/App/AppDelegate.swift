@@ -12,6 +12,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
     var webViewBottomConstraint: NSLayoutConstraint!
     var pendingDeviceToken: String?
     var splashView: UIView?
+    var splashReadyToDismiss = false
+    var splashMinTimeElapsed = false
 
     // MARK: - App Lifecycle
 
@@ -104,14 +106,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         splash.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         splash.backgroundColor = UIColor(red: 0.96, green: 0.94, blue: 0.90, alpha: 1.0)
 
-        // App logo
-        let logoLabel = UILabel()
-        logoLabel.text = "Spotd"
-        logoLabel.font = UIFont.systemFont(ofSize: 42, weight: .heavy)
-        logoLabel.textColor = UIColor(red: 1.0, green: 0.42, blue: 0.29, alpha: 1.0) // #FF6B4A
-        logoLabel.textAlignment = .center
-        logoLabel.translatesAutoresizingMaskIntoConstraints = false
-        splash.addSubview(logoLabel)
+        // App logo (actual Spotd logo image)
+        let logoImage = UIImageView(image: UIImage(named: "SpotdLogo"))
+        logoImage.contentMode = .scaleAspectFit
+        logoImage.translatesAutoresizingMaskIntoConstraints = false
+        splash.addSubview(logoImage)
 
         // Subtitle
         let subLabel = UILabel()
@@ -144,9 +143,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         }
 
         NSLayoutConstraint.activate([
-            logoLabel.centerXAnchor.constraint(equalTo: splash.centerXAnchor),
-            logoLabel.centerYAnchor.constraint(equalTo: splash.centerYAnchor, constant: -20),
-            subLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 6),
+            logoImage.centerXAnchor.constraint(equalTo: splash.centerXAnchor),
+            logoImage.centerYAnchor.constraint(equalTo: splash.centerYAnchor, constant: -20),
+            logoImage.widthAnchor.constraint(equalToConstant: 180),
+            logoImage.heightAnchor.constraint(equalToConstant: 60),
+            subLabel.topAnchor.constraint(equalTo: logoImage.bottomAnchor, constant: 6),
             subLabel.centerXAnchor.constraint(equalTo: splash.centerXAnchor),
             dotsStack.topAnchor.constraint(equalTo: subLabel.bottomAnchor, constant: 28),
             dotsStack.centerXAnchor.constraint(equalTo: splash.centerXAnchor)
