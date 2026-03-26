@@ -70,5 +70,16 @@
 <string>Spotd saves check-in photos to your photo library.</string>
 <key>ITSAppUsesNonExemptEncryption</key>
 <false/>
+<key>CFBundleURLTypes</key>
+<array>
+	<dict>
+		<key>CFBundleURLName</key>
+		<string>biz.spotd.app</string>
+		<key>CFBundleURLSchemes</key>
+		<array>
+			<string>spotd</string>
+		</array>
+	</dict>
+</array>
 </dict>
 </plist>
