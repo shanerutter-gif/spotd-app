@@ -68,5 +68,7 @@
 <string>Spotd accesses your photo library so you can share check-in photos.</string>
 <key>NSPhotoLibraryAddUsageDescription</key>
 <string>Spotd saves check-in photos to your photo library.</string>
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>
 </dict>
 </plist>
