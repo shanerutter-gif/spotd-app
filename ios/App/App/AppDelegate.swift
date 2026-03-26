@@ -3,6 +3,8 @@ import WebKit
 import UserNotifications
 import CoreSpotlight
 import MobileCoreServices
+import SafariServices
+import AuthenticationServices
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate {
@@ -36,11 +38,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         userController.add(self, name: "spotdPush")
         userController.add(self, name: "spotdCache")
         userController.add(self, name: "spotdSpotlight")
+        userController.add(self, name: "spotdOAuth")
+        userController.add(self, name: "spotdBrowser")
 
         // Inject native platform flag + offline cache helper
         let script = WKUserScript(
             source: """
-            window.spotdNative = { platform: 'ios' };
+            window.spotdNative = {
+                platform: 'ios',
+                openOAuth: function(url) {
+                    window.webkit.messageHandlers.spotdOAuth.postMessage(url);
+                },
+                openBrowser: function(url) {
+                    window.webkit.messageHandlers.spotdBrowser.postMessage(url);
+                }
+            };
             window.spotdCache = {
                 set: function(key, value) {
                     window.webkit.messageHandlers.spotdCache.postMessage(JSON.stringify({ action: 'set', key: key, value: value }));
@@ -201,24 +213,95 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         injectCachedData()
     }
 
+    // OAuth provider hosts that should use ASWebAuthenticationSession
+    private static let oauthHosts = [
+        "accounts.google.com",
+        "appleid.apple.com",
+        "supabase.co",        // Supabase auth intermediary
+        "opcskuzbdfrlnyhraysk.supabase.co"
+    ]
+
+    private func isOAuthURL(_ url: URL) -> Bool {
+        guard let host = url.host else { return false }
+        return Self.oauthHosts.contains(where: { host.contains($0) })
+    }
+
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if let host = navigationAction.request.url?.host, !host.contains("spotd.biz") {
-            UIApplication.shared.open(navigationAction.request.url!)
-            decisionHandler(.cancel)
-        } else {
+        guard let url = navigationAction.request.url, let host = url.host else {
             decisionHandler(.allow)
+            return
         }
+
+        if host.contains("spotd.biz") {
+            decisionHandler(.allow)
+            return
+        }
+
+        // OAuth flows — use ASWebAuthenticationSession so user stays in app
+        if isOAuthURL(url) {
+            decisionHandler(.cancel)
+            startOAuthSession(url: url)
+            return
+        }
+
+        // All other external URLs — open in-app browser
+        decisionHandler(.cancel)
+        openInAppBrowser(url: url)
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if let url = navigationAction.request.url {
             if let host = url.host, !host.contains("spotd.biz") {
-                UIApplication.shared.open(url)
+                if isOAuthURL(url) {
+                    startOAuthSession(url: url)
+                } else {
+                    openInAppBrowser(url: url)
+                }
             } else {
                 webView.load(navigationAction.request)
             }
         }
         return nil
+    }
+
+    // MARK: - In-App Browser (SFSafariViewController)
+
+    func openInAppBrowser(url: URL) {
+        DispatchQueue.main.async {
+            let config = SFSafariViewController.Configuration()
+            config.entersReaderIfAvailable = false
+            let safari = SFSafariViewController(url: url, configuration: config)
+            safari.preferredControlTintColor = UIColor(red: 1.0, green: 0.42, blue: 0.29, alpha: 1.0) // coral
+            safari.modalPresentationStyle = .pageSheet
+            self.window?.rootViewController?.present(safari, animated: true)
+        }
+    }
+
+    // MARK: - OAuth via ASWebAuthenticationSession
+
+    func startOAuthSession(url: URL) {
+        DispatchQueue.main.async {
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: "https"
+            ) { callbackURL, error in
+                if let error = error {
+                    print("[OAuth] Session error: \(error.localizedDescription)")
+                    return
+                }
+                guard let callbackURL = callbackURL else { return }
+
+                // If callback contains auth tokens (hash fragment), load it in the webview
+                // so the existing JS handleOAuthCallback() can process it
+                let urlString = callbackURL.absoluteString
+                if urlString.contains("spotd.biz") {
+                    self.webView?.load(URLRequest(url: callbackURL))
+                }
+            }
+            session.presentationContextProvider = self
+            session.prefersEphemeralWebBrowserSession = false
+            session.start()
+        }
     }
 
     // Handle load failures — show cached content
@@ -388,6 +471,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
     }
 }
 
+// MARK: - ASWebAuthenticationSession Presentation
+
+extension AppDelegate: ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        return window!
+    }
+}
+
 // MARK: - JS Bridge
 
 extension AppDelegate: WKScriptMessageHandler {
@@ -443,6 +534,18 @@ extension AppDelegate: WKScriptMessageHandler {
         if message.name == "spotdSpotlight" {
             guard let body = message.body as? String else { return }
             indexVenuesInSpotlight(body)
+        }
+
+        // ── OAuth (ASWebAuthenticationSession) ──
+        if message.name == "spotdOAuth" {
+            guard let urlString = message.body as? String, let url = URL(string: urlString) else { return }
+            startOAuthSession(url: url)
+        }
+
+        // ── In-app browser (SFSafariViewController) ──
+        if message.name == "spotdBrowser" {
+            guard let urlString = message.body as? String, let url = URL(string: urlString) else { return }
+            openInAppBrowser(url: url)
         }
     }
 }
