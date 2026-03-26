@@ -283,7 +283,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
         DispatchQueue.main.async {
             let session = ASWebAuthenticationSession(
                 url: url,
-                callbackURLScheme: "https"
+                callbackURLScheme: "spotd"
             ) { callbackURL, error in
                 if let error = error {
                     print("[OAuth] Session error: \(error.localizedDescription)")
@@ -291,11 +291,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, WKNavigationDelegate, WKU
                 }
                 guard let callbackURL = callbackURL else { return }
 
-                // If callback contains auth tokens (hash fragment), load it in the webview
-                // so the existing JS handleOAuthCallback() can process it
-                let urlString = callbackURL.absoluteString
-                if urlString.contains("spotd.biz") {
-                    self.webView?.load(URLRequest(url: callbackURL))
+                // The callback URL is spotd://auth-callback#access_token=...
+                // Rewrite it to https://spotd.biz/?auth_callback=1#... so the
+                // existing JS handleOAuthCallback() can parse the tokens
+                let callbackString = callbackURL.absoluteString
+                if let hashIndex = callbackString.range(of: "#") {
+                    let fragment = callbackString[hashIndex.lowerBound...]
+                    let webURL = "https://spotd.biz/?auth_callback=1" + fragment
+                    if let url = URL(string: String(webURL)) {
+                        self.webView?.load(URLRequest(url: url))
+                    }
                 }
             }
             session.presentationContextProvider = self
